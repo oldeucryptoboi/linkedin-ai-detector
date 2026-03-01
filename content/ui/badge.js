@@ -14,21 +14,21 @@ window.AIDetector.badge = (() => {
 
   function createLoading() {
     const badge = document.createElement('div');
-    badge.className = 'laid-badge laid-badge--loading laid-badge--claude';
-    badge.title = 'Claude: Analyzing...';
+    badge.className = 'laid-badge laid-badge--loading';
+    badge.title = 'Analyzing...';
     return badge;
   }
 
-  function createClaude(result) {
+  function createAI(result) {
     const badge = document.createElement('div');
-    badge.className = 'laid-badge laid-badge--claude';
+    badge.className = 'laid-badge laid-badge--ai';
     const color = window.AIDetector.scoring.getColor(result.score);
     badge.style.backgroundColor = color;
     badge.textContent = Math.round(result.score * 100);
-    badge.title = `Claude: ${window.AIDetector.scoring.getLabel(result.score)}`;
-    badge.setAttribute('data-laid-claude-score', result.score);
+    badge.title = `AI: ${window.AIDetector.scoring.getLabel(result.score)}`;
+    badge.setAttribute('data-laid-score', result.score);
     return badge;
   }
 
-  return { create, createLoading, createClaude };
+  return { create, createLoading, createAI };
 })();

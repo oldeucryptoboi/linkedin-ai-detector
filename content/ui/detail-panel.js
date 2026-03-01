@@ -65,9 +65,9 @@ window.AIDetector.detailPanel = (() => {
     return panel;
   }
 
-  function createClaude(result) {
+  function createAI(result, providerName) {
     const panel = document.createElement('div');
-    panel.className = 'laid-panel laid-panel--claude';
+    panel.className = 'laid-panel laid-panel--ai';
 
     // Header
     const header = document.createElement('div');
@@ -75,7 +75,7 @@ window.AIDetector.detailPanel = (() => {
 
     const title = document.createElement('span');
     title.className = 'laid-panel-title';
-    title.textContent = 'Claude AI Detection';
+    title.textContent = `${providerName} AI Detection`;
 
     const bgColor = window.AIDetector.scoring.getBgColor(result.score);
     const color = window.AIDetector.scoring.getColor(result.score);
@@ -104,5 +104,5 @@ window.AIDetector.detailPanel = (() => {
     panel.classList.toggle('laid-panel--open');
   }
 
-  return { create, createClaude, toggle };
+  return { create, createAI, toggle };
 })();

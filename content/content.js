@@ -15,13 +15,29 @@ window.AIDetector = window.AIDetector || {};
   const processedPosts = new WeakSet();
   let enabled = true;
   let sensitivity = 50;
+  let provider = 'local';
+  let apiKey = '';
+
+  const PROVIDER_NAMES = {
+    local: 'Local',
+    claude: 'Claude',
+    openai: 'OpenAI',
+    gemini: 'Gemini',
+  };
+
+  const AI_PROMPT = `Analyze this LinkedIn post and determine if it was written by AI or a human. Return ONLY valid JSON with no other text: {"score": <0.0-1.0 where 1.0 = certainly AI>, "reasoning": "<1-2 sentence explanation>"}
+
+Post text:
+`;
 
   // Load settings from chrome.storage
   function loadSettings() {
     if (chrome?.storage?.sync) {
-      chrome.storage.sync.get(['enabled', 'sensitivity'], (data) => {
+      chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
         if (data.enabled !== undefined) enabled = data.enabled;
         if (data.sensitivity !== undefined) sensitivity = data.sensitivity;
+        if (data.provider !== undefined) provider = data.provider;
+        if (data.apiKey !== undefined) apiKey = data.apiKey;
       });
 
       // Listen for setting changes
@@ -33,7 +49,12 @@ window.AIDetector = window.AIDetector || {};
         }
         if (changes.sensitivity) {
           sensitivity = changes.sensitivity.newValue;
-          reanalyzeAll();
+          if (provider === 'local') reanalyzeAll();
+        }
+        if (changes.provider || changes.apiKey) {
+          if (changes.provider) provider = changes.provider.newValue;
+          if (changes.apiKey) apiKey = changes.apiKey.newValue;
+          clearAndRescan();
         }
       });
     }
@@ -41,7 +62,6 @@ window.AIDetector = window.AIDetector || {};
 
   // Extract text content from a post element
   function extractPostText(postEl) {
-    // Try multiple selectors to find the text
     const textEl = postEl.querySelector(SELECTORS.seeMoreText) ||
                    postEl.querySelector(SELECTORS.postText);
     if (!textEl) return '';
@@ -65,51 +85,85 @@ window.AIDetector = window.AIDetector || {};
     });
   }
 
-  // Call Claude API directly from content script (MV3 allows cross-origin
-  // fetch to URLs declared in host_permissions)
-  async function requestClaudeAnalysis(text) {
+  // Unified AI analysis across providers
+  async function requestAIAnalysis(prov, key, text) {
+    if (!key) return null;
+
+    const prompt = AI_PROMPT + text;
+
     try {
-      const data = await chrome.storage.sync.get(['claudeApiKey']);
-      const apiKey = data.claudeApiKey;
-      if (!apiKey) return null;
+      let rawText;
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 256,
-          messages: [{
-            role: 'user',
-            content: `Analyze this LinkedIn post and determine if it was written by AI or a human. Return ONLY valid JSON with no other text: {"score": <0.0-1.0 where 1.0 = certainly AI>, "reasoning": "<1-2 sentence explanation>"}
+      if (prov === 'claude') {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!resp.ok) {
+          console.warn('[LAID] Claude API error:', resp.status);
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.content?.[0]?.text || '';
 
-Post text:
-${text}`,
-          }],
-        }),
-      });
+      } else if (prov === 'openai') {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!resp.ok) {
+          console.warn('[LAID] OpenAI API error:', resp.status);
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.choices?.[0]?.message?.content || '';
 
-      if (!resp.ok) {
-        console.warn('[LAID] Claude API error:', resp.status);
-        return null;
+      } else if (prov === 'gemini') {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+            }),
+          }
+        );
+        if (!resp.ok) {
+          console.warn('[LAID] Gemini API error:', resp.status);
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
       }
 
-      const result = await resp.json();
-      let content = result.content?.[0]?.text || '';
       // Strip markdown code fences if present
-      content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-      const parsed = JSON.parse(content);
+      rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(rawText);
       return {
         score: Math.max(0, Math.min(1, parsed.score)),
         reasoning: parsed.reasoning || '',
       };
     } catch (err) {
-      console.warn('[LAID] Claude API error:', err.message);
+      console.warn(`[LAID] ${prov} API error:`, err.message);
       return null;
     }
   }
@@ -130,46 +184,47 @@ ${text}`,
       postEl.style.position = 'relative';
     }
 
-    // Run heuristic analysis
-    const result = window.AIDetector.detector.analyze(text, sensitivity);
-
-    // Create badge group container
-    const group = document.createElement('div');
-    group.className = 'laid-badge-group';
-
-    // Heuristic badge + panel
-    const badge = window.AIDetector.badge.create(result);
-    const panel = window.AIDetector.detailPanel.create(result);
-    bindBadgeClick(badge, panel);
-    group.appendChild(badge);
-
-    postEl.appendChild(group);
-    postEl.appendChild(panel);
-
-    // Store references for reanalysis
+    // Store text for reanalysis
     postEl._laidText = text;
-    postEl._laidBadge = badge;
-    postEl._laidPanel = panel;
-    postEl._laidGroup = group;
 
-    // Claude badge — show loading, then call API
-    const loadingBadge = window.AIDetector.badge.createLoading();
-    group.appendChild(loadingBadge);
+    if (provider === 'local') {
+      // Run heuristic analysis
+      const result = window.AIDetector.detector.analyze(text, sensitivity);
+      const badge = window.AIDetector.badge.create(result);
+      const panel = window.AIDetector.detailPanel.create(result);
+      bindBadgeClick(badge, panel);
 
-    requestClaudeAnalysis(text).then((claudeResult) => {
-      loadingBadge.remove();
+      postEl.appendChild(badge);
+      postEl.appendChild(panel);
 
-      if (!claudeResult) return;
+      postEl._laidBadge = badge;
+      postEl._laidPanel = panel;
+    } else {
+      // API provider — show loading, then call API
+      const loadingBadge = window.AIDetector.badge.createLoading();
+      postEl.appendChild(loadingBadge);
+      postEl._laidBadge = loadingBadge;
 
-      const claudeBadge = window.AIDetector.badge.createClaude(claudeResult);
-      const claudePanel = window.AIDetector.detailPanel.createClaude(claudeResult);
-      bindBadgeClick(claudeBadge, claudePanel);
-      group.appendChild(claudeBadge);
-      postEl.appendChild(claudePanel);
+      requestAIAnalysis(provider, apiKey, text).then((aiResult) => {
+        loadingBadge.remove();
 
-      postEl._laidClaudeBadge = claudeBadge;
-      postEl._laidClaudePanel = claudePanel;
-    });
+        if (!aiResult) {
+          processedPosts.delete(postEl);
+          postEl._laidBadge = null;
+          return;
+        }
+
+        const badge = window.AIDetector.badge.createAI(aiResult);
+        const panel = window.AIDetector.detailPanel.createAI(aiResult, PROVIDER_NAMES[provider]);
+        bindBadgeClick(badge, panel);
+
+        postEl.appendChild(badge);
+        postEl.appendChild(panel);
+
+        postEl._laidBadge = badge;
+        postEl._laidPanel = panel;
+      });
+    }
   }
 
   // Scan all visible posts
@@ -180,26 +235,38 @@ ${text}`,
     }
   }
 
-  // Remove all badges (when disabled)
+  // Remove all badges and panels
   function removeAllBadges() {
-    document.querySelectorAll('.laid-badge-group').forEach(g => g.remove());
     document.querySelectorAll('.laid-badge').forEach(b => b.remove());
     document.querySelectorAll('.laid-panel').forEach(p => p.remove());
+    // Allow reprocessing
+    const posts = document.querySelectorAll(SELECTORS.feedPost);
+    for (const post of posts) {
+      processedPosts.delete(post);
+      post._laidBadge = null;
+      post._laidPanel = null;
+    }
   }
 
-  // Reanalyze all processed posts (when sensitivity changes)
+  // Clear all badges and rescan (when provider or key changes)
+  function clearAndRescan() {
+    removeAllBadges();
+    if (enabled) scanAllPosts();
+  }
+
+  // Reanalyze all processed posts (when sensitivity changes, local only)
   function reanalyzeAll() {
     const posts = document.querySelectorAll(SELECTORS.feedPost);
     for (const post of posts) {
       if (post._laidText && post._laidBadge && post._laidPanel) {
         const result = window.AIDetector.detector.analyze(post._laidText, sensitivity);
 
-        // Update heuristic badge
+        // Update badge
         post._laidBadge.style.backgroundColor = result.color;
         post._laidBadge.textContent = Math.round(result.score * 100);
         post._laidBadge.title = `Heuristic: ${result.label}`;
 
-        // Replace heuristic panel
+        // Replace panel
         const newPanel = window.AIDetector.detailPanel.create(result);
         const wasOpen = post._laidPanel.classList.contains('laid-panel--open');
         post._laidPanel.remove();
@@ -207,7 +274,7 @@ ${text}`,
         post._laidPanel = newPanel;
         if (wasOpen) newPanel.classList.add('laid-panel--open');
 
-        // Re-bind heuristic badge click
+        // Re-bind badge click
         post._laidBadge.onclick = null;
         bindBadgeClick(post._laidBadge, newPanel);
       }

@@ -2,9 +2,14 @@
   "manifest_version": 3,
   "name": "LAID — LinkedIn AI Detector",
   "version": "1.0.0",
-  "description": "Dual-read AI detection for LinkedIn: instant heuristic scoring + Claude API analysis",
+  "description": "AI detection for LinkedIn: local heuristic or API-powered analysis (Claude, OpenAI, Gemini)",
   "permissions": ["storage"],
-  "host_permissions": ["https://www.linkedin.com/*", "https://api.anthropic.com/*"],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

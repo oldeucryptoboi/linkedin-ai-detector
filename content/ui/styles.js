@@ -10,16 +10,10 @@ window.AIDetector.styles = (() => {
 
     const style = document.createElement('style');
     style.textContent = `
-      .laid-badge-group {
+      .laid-badge {
         position: absolute;
         top: 12px;
         right: 12px;
-        display: flex;
-        gap: 4px;
-        z-index: 10;
-      }
-
-      .laid-badge {
         width: 28px;
         height: 28px;
         border-radius: 50%;
@@ -35,6 +29,7 @@ window.AIDetector.styles = (() => {
         transition: transform 0.15s ease, box-shadow 0.15s ease;
         user-select: none;
         line-height: 1;
+        z-index: 10;
       }
 
       .laid-badge:hover {
@@ -42,8 +37,7 @@ window.AIDetector.styles = (() => {
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       }
 
-      .laid-badge--claude {
-        background-color: #7c3aed;
+      .laid-badge--ai {
         font-size: 10px;
         letter-spacing: -0.5px;
       }
@@ -154,7 +148,7 @@ window.AIDetector.styles = (() => {
         line-height: 1.3;
       }
 
-      .laid-panel--claude .laid-panel-header {
+      .laid-panel--ai .laid-panel-header {
         border-bottom-color: #ede9fe;
       }
 
@@ -167,10 +161,6 @@ window.AIDetector.styles = (() => {
         background: #f8f7ff;
         border-radius: 6px;
         border-left: 3px solid #7c3aed;
-      }
-
-      .laid-post-wrapper {
-        position: relative;
       }
     `;
     document.head.appendChild(style);

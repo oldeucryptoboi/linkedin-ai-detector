@@ -68,6 +68,47 @@
     .toggle input:checked + .toggle-slider::before {
       transform: translateX(18px);
     }
+    /* Provider radio group */
+    .provider-group {
+      margin-bottom: 14px;
+    }
+    .provider-group .setting-label {
+      display: block;
+      margin-bottom: 8px;
+    }
+    .provider-options {
+      display: flex;
+      gap: 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .provider-options label {
+      flex: 1;
+      text-align: center;
+      padding: 6px 0;
+      font-size: 11px;
+      font-weight: 500;
+      color: #555;
+      cursor: pointer;
+      background: #fafafa;
+      border-right: 1px solid #ddd;
+      transition: background 0.15s, color 0.15s;
+    }
+    .provider-options label:last-child {
+      border-right: none;
+    }
+    .provider-options input {
+      display: none;
+    }
+    .provider-options input:checked + span {
+      background: #0a66c2;
+      color: #fff;
+    }
+    .provider-options label:has(input:checked) {
+      background: #0a66c2;
+      color: #fff;
+    }
     /* Slider */
     .slider-group {
       margin-bottom: 8px;
@@ -153,6 +194,7 @@
     .api-key-status--saved {
       color: #16a34a;
     }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -167,7 +209,19 @@
     </label>
   </div>
 
-  <div class="slider-group">
+  <div class="provider-group">
+    <span class="setting-label">Detection Engine</span>
+    <div class="provider-options">
+      <label><input type="radio" name="provider" value="local" checked><span>Local</span></label>
+      <label><input type="radio" name="provider" value="claude"><span>Claude</span></label>
+      <label><input type="radio" name="provider" value="openai"><span>OpenAI</span></label>
+      <label><input type="radio" name="provider" value="gemini"><span>Gemini</span></label>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="slider-group" id="sensitivity-group">
     <div class="slider-header">
       <span class="setting-label">Sensitivity</span>
       <span class="slider-value" id="sensitivity-value">50</span>
@@ -176,13 +230,11 @@
     <p class="hint">Lower = fewer false positives. Higher = catches more AI text.</p>
   </div>
 
-  <div class="divider"></div>
-
-  <div class="api-key-group">
-    <span class="setting-label">Claude API Key</span>
+  <div class="api-key-group hidden" id="api-key-group">
+    <span class="setting-label">API Key</span>
     <div class="api-key-masked" id="api-key-masked" style="display:none"></div>
-    <input type="text" id="api-key" class="api-key-input" placeholder="sk-ant-..." style="display:none">
-    <p class="hint">Enables a second AI-detection badge powered by Claude. Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
+    <input type="text" id="api-key" class="api-key-input" placeholder="sk-ant-...">
+    <p class="hint" id="api-key-hint">Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
     <p class="api-key-status" id="api-key-status"></p>
   </div>
 

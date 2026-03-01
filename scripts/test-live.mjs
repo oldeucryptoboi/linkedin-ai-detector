@@ -39,11 +39,15 @@ async function main() {
 
   const page = context.pages()[0] || await context.newPage();
 
-  // Set Claude API key via extension service worker
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Set provider + API key via extension service worker
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+  let provider = 'local';
+  if (process.env.ANTHROPIC_API_KEY) provider = 'claude';
+  else if (process.env.OPENAI_API_KEY) provider = 'openai';
+  else if (process.env.GEMINI_API_KEY) provider = 'gemini';
+
   if (apiKey) {
-    console.log('Setting Claude API key in extension storage...');
-    // Find the extension's background service worker target
+    console.log(`Setting provider=${provider} and API key in extension storage...`);
     let swPage;
     for (const p of context.serviceWorkers()) {
       if (p.url().includes('service-worker')) {
@@ -52,7 +56,6 @@ async function main() {
       }
     }
     if (!swPage) {
-      // Open extension page to trigger SW registration, then find it
       const extPage = await context.newPage();
       await extPage.goto('chrome://extensions/', { waitUntil: 'domcontentloaded' });
       await sleep(2000);
@@ -64,19 +67,20 @@ async function main() {
         }
       }
     }
+    const storageData = { provider, apiKey };
     if (swPage) {
-      await swPage.evaluate((key) => {
-        return new Promise(resolve => chrome.storage.sync.set({ claudeApiKey: key }, resolve));
-      }, apiKey);
-      console.log('API key set successfully.');
+      await swPage.evaluate((data) => {
+        return new Promise(resolve => chrome.storage.sync.set(data, resolve));
+      }, storageData);
+      console.log('Storage set successfully via service worker.');
     } else {
-      console.log('Could not find service worker — setting key via page instead.');
-      await page.evaluate((key) => {
-        return new Promise(resolve => chrome.storage.sync.set({ claudeApiKey: key }, resolve));
-      }, apiKey);
+      console.log('Could not find service worker — setting via page instead.');
+      await page.evaluate((data) => {
+        return new Promise(resolve => chrome.storage.sync.set(data, resolve));
+      }, storageData);
     }
   } else {
-    console.log('No ANTHROPIC_API_KEY in env — skipping Claude badge test.');
+    console.log('No API key in env — testing local heuristic only.');
   }
 
   // Navigate to LinkedIn feed
@@ -88,7 +92,7 @@ async function main() {
 
   console.log('Landed on:', page.url());
 
-  // Wait for either feed posts or login form — whichever appears first
+  // Wait for either feed posts or login form
   console.log('Waiting for feed to load (or login page)...');
   const feedOrLogin = await Promise.race([
     page.waitForSelector('.feed-shared-update-v2', { timeout: 120_000 }).then(() => 'feed'),
@@ -115,9 +119,9 @@ async function main() {
     await sleep(10_000);
   }
 
-  // Reload to ensure content script picks up API key from storage
+  // Reload to ensure content script picks up settings from storage
   if (apiKey) {
-    console.log('Reloading page to pick up API key...');
+    console.log('Reloading page to pick up settings...');
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
     await page.waitForSelector('.feed-shared-update-v2', { timeout: 30_000 });
     console.log('Page reloaded.');
@@ -149,94 +153,64 @@ async function main() {
     return;
   }
 
-  // Log all heuristic badge scores
+  // If API provider, wait for loading badges to resolve
+  if (provider !== 'local') {
+    const loadingCount = await page.$$eval('.laid-badge--loading', els => els.length);
+    if (loadingCount > 0) {
+      console.log(`${loadingCount} badge(s) still loading...`);
+      try {
+        await page.waitForSelector('.laid-badge--ai', { timeout: 30_000 });
+        await sleep(1000);
+      } catch {
+        console.log('AI badges did not finish loading within 30s.');
+      }
+    }
+  }
+
+  // Log all badges
   const badges = await page.$$eval(badgeSelector, els =>
     els.map(el => ({
       score: el.getAttribute('data-laid-score'),
       text: el.textContent,
       label: el.title,
-      isClaude: el.classList.contains('laid-badge--claude'),
+      isAI: el.classList.contains('laid-badge--ai'),
       isLoading: el.classList.contains('laid-badge--loading'),
     }))
   );
 
-  const heuristicBadges = badges.filter(b => !b.isClaude);
-  const claudeBadges = badges.filter(b => b.isClaude && !b.isLoading);
-  const loadingBadges = badges.filter(b => b.isLoading);
-
-  console.log(`\nFound ${heuristicBadges.length} heuristic badge(s):`);
-  for (const b of heuristicBadges) {
+  const scoredBadges = badges.filter(b => !b.isLoading);
+  console.log(`\nFound ${scoredBadges.length} badge(s) [provider: ${provider}]:`);
+  for (const b of scoredBadges) {
     console.log(`  ${b.text}% — ${b.label} (raw: ${b.score})`);
   }
 
-  if (loadingBadges.length > 0) {
-    console.log(`\n${loadingBadges.length} Claude badge(s) still loading...`);
-    // Wait up to 30s for Claude badges to resolve
-    try {
-      await page.waitForSelector('.laid-badge--claude:not(.laid-badge--loading)', { timeout: 30_000 });
-      await sleep(1000);
-    } catch {
-      console.log('Claude badges did not finish loading within 30s.');
-    }
-  }
-
-  // Re-check Claude badges after loading
-  const claudeFinal = await page.$$eval('.laid-badge--claude:not(.laid-badge--loading)', els =>
-    els.map(el => ({
-      score: el.getAttribute('data-laid-claude-score'),
-      text: el.textContent,
-      label: el.title,
-    }))
-  );
-
-  if (claudeFinal.length > 0) {
-    console.log(`\nFound ${claudeFinal.length} Claude badge(s):`);
-    for (const b of claudeFinal) {
-      console.log(`  ${b.text}% — ${b.label} (raw: ${b.score})`);
-    }
-  } else {
-    console.log('\nNo Claude badges found (API key may not be configured).');
-  }
-
-  // Check badge groups
-  const groupCount = await page.$$eval('.laid-badge-group', g => g.length);
-  console.log(`\nBadge groups: ${groupCount}`);
-
-  // Click first heuristic badge to open detail panel
-  const firstBadge = page.locator(badgeSelector + ':not(.laid-badge--claude)').first();
+  // Click first badge to open detail panel
+  const firstBadge = page.locator(badgeSelector + ':not(.laid-badge--loading)').first();
   await firstBadge.click();
   await sleep(500);
 
   const panelOpen = await page.$('.laid-panel--open');
   if (panelOpen) {
-    console.log('\nHeuristic detail panel opened successfully.');
-    const signals = await page.$$eval('.laid-panel--open .laid-signal-row', rows =>
-      rows.map(row => ({
-        label: row.querySelector('.laid-signal-label')?.textContent,
-        value: row.querySelector('.laid-signal-value')?.textContent,
-      }))
-    );
-    for (const s of signals) {
-      console.log(`  ${s.label}: ${s.value}%`);
+    console.log('\nDetail panel opened successfully.');
+
+    if (provider === 'local') {
+      const signals = await page.$$eval('.laid-panel--open .laid-signal-row', rows =>
+        rows.map(row => ({
+          label: row.querySelector('.laid-signal-label')?.textContent,
+          value: row.querySelector('.laid-signal-value')?.textContent,
+        }))
+      );
+      for (const s of signals) {
+        console.log(`  ${s.label}: ${s.value}%`);
+      }
+    } else {
+      const reasoning = await page.$eval('.laid-panel--open .laid-panel-reasoning', el => el.textContent).catch(() => null);
+      if (reasoning) {
+        console.log(`  Reasoning: ${reasoning}`);
+      }
     }
   } else {
     console.log('Panel did not open — click may not have reached badge.');
-  }
-
-  // Try clicking a Claude badge if present
-  const claudeBadgeEl = page.locator('.laid-badge--claude:not(.laid-badge--loading)').first();
-  if (await claudeBadgeEl.count() > 0) {
-    // Close any open panel first
-    await page.click('body');
-    await sleep(300);
-    await claudeBadgeEl.click();
-    await sleep(500);
-    const claudePanelOpen = await page.$('.laid-panel--claude.laid-panel--open');
-    if (claudePanelOpen) {
-      console.log('\nClaude detail panel opened successfully.');
-      const reasoning = await page.$eval('.laid-panel--claude.laid-panel--open .laid-panel-reasoning', el => el.textContent);
-      console.log(`  Reasoning: ${reasoning}`);
-    }
   }
 
   // Screenshot
