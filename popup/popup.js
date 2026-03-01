@@ -110,13 +110,17 @@ for (const radio of providerRadios) {
     updateProviderUI(prov);
     chrome.storage.sync.set({ provider: prov });
 
-    // Reset key display when switching providers
-    apiKeyInput.value = '';
-    apiKeyMasked.style.display = 'none';
-    apiKeyInput.style.display = '';
-    apiKeyStatus.textContent = '';
-    // Clear the stored key when switching
-    chrome.storage.sync.set({ apiKey: '' });
+    // Restore saved key display for this provider
+    chrome.storage.sync.get(['apiKey'], (data) => {
+      if (data.apiKey) {
+        apiKeyInput.value = data.apiKey;
+        showMasked(data.apiKey);
+      } else {
+        apiKeyMasked.style.display = 'none';
+        apiKeyInput.style.display = '';
+        apiKeyStatus.textContent = '';
+      }
+    });
   });
 }
 

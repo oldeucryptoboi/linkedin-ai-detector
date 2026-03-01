@@ -25,6 +25,11 @@ window.AIDetector = window.AIDetector || {};
     gemini: 'Gemini',
   };
 
+  const AI_PROMPT = `Analyze this LinkedIn post and determine if it was written by AI or a human. Return ONLY valid JSON with no other text: {"score": <0.0-1.0 where 1.0 = certainly AI>, "reasoning": "<1-2 sentence explanation>"}
+
+Post text:
+`;
+
   let settingsLoaded = false;
 
   // Load settings from chrome.storage, then run initial scan
@@ -82,14 +87,88 @@ window.AIDetector = window.AIDetector || {};
     });
   }
 
-  // Send AI analysis request to background service worker
-  function requestAIAnalysis(prov, key, text) {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: 'aiAnalysis', provider: prov, apiKey: key, text },
-        (result) => resolve(result || null)
-      );
-    });
+  // Fetch AI analysis directly from content script
+  // (MV3 content scripts can fetch cross-origin URLs in host_permissions)
+  async function requestAIAnalysis(prov, key, text) {
+    if (!key) return null;
+
+    const prompt = AI_PROMPT + text;
+
+    try {
+      let rawText;
+
+      if (prov === 'claude') {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!resp.ok) {
+          console.warn('[LAID] Claude API error:', resp.status, await resp.text());
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.content?.[0]?.text || '';
+
+      } else if (prov === 'openai') {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!resp.ok) {
+          console.warn('[LAID] OpenAI API error:', resp.status);
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.choices?.[0]?.message?.content || '';
+
+      } else if (prov === 'gemini') {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+            }),
+          }
+        );
+        if (!resp.ok) {
+          console.warn('[LAID] Gemini API error:', resp.status);
+          return null;
+        }
+        const result = await resp.json();
+        rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+
+      // Strip markdown code fences if present
+      rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(rawText);
+      return {
+        score: Math.max(0, Math.min(1, parsed.score)),
+        reasoning: parsed.reasoning || '',
+      };
+    } catch (err) {
+      console.warn(`[LAID] ${prov} API error:`, err.message);
+      return null;
+    }
   }
 
   // Process a single post element
