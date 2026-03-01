@@ -174,10 +174,25 @@ Post text:
 
       // Strip markdown code fences if present
       rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-      const parsed = JSON.parse(rawText);
+
+      // Try JSON.parse first; fall back to regex extraction if it fails
+      // (LLMs sometimes return unescaped quotes in reasoning text)
+      let score, reasoning;
+      try {
+        const parsed = JSON.parse(rawText);
+        score = parsed.score;
+        reasoning = parsed.reasoning || '';
+      } catch {
+        const scoreMatch = rawText.match(/"score"\s*:\s*([\d.]+)/);
+        const reasoningMatch = rawText.match(/"reasoning"\s*:\s*"([\s\S]*?)"\s*\}?\s*$/);
+        if (!scoreMatch) throw new Error('Could not parse score from response');
+        score = parseFloat(scoreMatch[1]);
+        reasoning = reasoningMatch ? reasoningMatch[1] : '';
+      }
+
       return {
-        score: Math.max(0, Math.min(1, parsed.score)),
-        reasoning: parsed.reasoning || '',
+        score: Math.max(0, Math.min(1, score)),
+        reasoning,
       };
     } catch (err) {
       console.warn(`[LAID] ${prov} API error:`, err.message);
