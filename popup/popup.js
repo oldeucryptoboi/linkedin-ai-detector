@@ -70,7 +70,7 @@ function showKeyForProvider(prov) {
       apiKeyMasked.style.display = 'none';
       apiKeyInput.style.display = '';
       apiKeyStatus.textContent = 'No key configured';
-      apiKeyStatus.className = 'api-key-status';
+      apiKeyStatus.className = 'api-key-status api-key-status--missing';
     }
   });
 }
