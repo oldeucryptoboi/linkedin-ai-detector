@@ -130,6 +130,21 @@
     .api-key-input:focus {
       border-color: #7c3aed;
     }
+    .api-key-masked {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #666;
+      cursor: pointer;
+      background: #fafafa;
+    }
+    .api-key-masked:hover {
+      border-color: #7c3aed;
+      color: #444;
+    }
     .api-key-status {
       font-size: 10px;
       margin-top: 4px;
@@ -165,7 +180,8 @@
 
   <div class="api-key-group">
     <span class="setting-label">Claude API Key</span>
-    <input type="password" id="api-key" class="api-key-input" placeholder="sk-ant-...">
+    <div class="api-key-masked" id="api-key-masked" style="display:none"></div>
+    <input type="text" id="api-key" class="api-key-input" placeholder="sk-ant-..." style="display:none">
     <p class="hint">Enables a second AI-detection badge powered by Claude. Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
     <p class="api-key-status" id="api-key-status"></p>
   </div>
