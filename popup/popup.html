@@ -198,6 +198,23 @@
       color: #d97706;
     }
     .hidden { display: none !important; }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 10px;
+      color: #aaa;
+    }
+    .footer a {
+      color: #888;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      color: #0a66c2;
+    }
   </style>
 </head>
 <body>
@@ -239,6 +256,11 @@
     <input type="text" id="api-key" class="api-key-input" placeholder="sk-ant-...">
     <p class="hint" id="api-key-hint">Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
     <p class="api-key-status" id="api-key-status"></p>
+  </div>
+
+  <div class="footer">
+    <span>LAID v1.0.0</span>
+    <a href="#" id="report-bug">Report a bug</a>
   </div>
 
   <script src="popup.js"></script>

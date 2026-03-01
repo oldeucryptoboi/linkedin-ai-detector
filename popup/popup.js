@@ -165,3 +165,24 @@ apiKeyInput.addEventListener('keydown', (e) => {
     saveKey();
   }
 });
+
+// Report a bug — opens pre-filled GitHub issue
+document.getElementById('report-bug').addEventListener('click', (e) => {
+  e.preventDefault();
+  const version = chrome.runtime.getManifest().version;
+  const ua = navigator.userAgent;
+  const body = [
+    '## Bug Description',
+    '<!-- Describe what happened -->',
+    '',
+    '## Expected Behavior',
+    '<!-- What should have happened -->',
+    '',
+    '## Environment',
+    `- LAID version: ${version}`,
+    `- Provider: ${currentProvider}`,
+    `- Browser: ${ua}`,
+  ].join('\n');
+  const url = `https://github.com/oldeucryptoboi/linkedin-ai-detector/issues/new?title=&body=${encodeURIComponent(body)}`;
+  chrome.tabs.create({ url });
+});
