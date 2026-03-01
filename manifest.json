@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn AI Post Detector",
+  "version": "1.0.0",
+  "description": "Detects AI-generated posts on LinkedIn using client-side heuristics",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.linkedin.com/*", "https://api.anthropic.com/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": [
+        "lib/text-utils.js",
+        "lib/word-lists.js",
+        "lib/scoring.js",
+        "content/signals/burstiness.js",
+        "content/signals/abstraction.js",
+        "content/signals/transitions.js",
+        "content/signals/generic-phrases.js",
+        "content/signals/paragraph-uniformity.js",
+        "content/signals/cadence.js",
+        "content/signals/contrast-hooks.js",
+        "content/signals/structure.js",
+        "content/signals/three-point.js",
+        "content/signals/list-density.js",
+        "content/detector.js",
+        "content/ui/styles.js",
+        "content/ui/badge.js",
+        "content/ui/detail-panel.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

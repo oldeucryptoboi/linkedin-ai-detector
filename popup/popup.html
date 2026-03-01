@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 16px;
+      color: #333;
+      background: #fff;
+    }
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #111;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 16px;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .setting-label {
+      font-size: 13px;
+      color: #444;
+    }
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      border-radius: 22px;
+      transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle input:checked + .toggle-slider {
+      background: #0a66c2;
+    }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+    }
+    /* Slider */
+    .slider-group {
+      margin-bottom: 8px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .slider-value {
+      font-size: 12px;
+      color: #0a66c2;
+      font-weight: 600;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #e0e0e0;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #0a66c2;
+      cursor: pointer;
+    }
+    .hint {
+      font-size: 10px;
+      color: #999;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 14px 0;
+    }
+    .api-key-group {
+      margin-bottom: 8px;
+    }
+    .api-key-group .setting-label {
+      display: block;
+      margin-bottom: 6px;
+    }
+    .api-key-input {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: monospace;
+      outline: none;
+    }
+    .api-key-input:focus {
+      border-color: #7c3aed;
+    }
+    .api-key-status {
+      font-size: 10px;
+      margin-top: 4px;
+      color: #888;
+    }
+    .api-key-status--saved {
+      color: #16a34a;
+    }
+  </style>
+</head>
+<body>
+  <h1>LinkedIn AI Detector</h1>
+  <p class="subtitle">Client-side AI post detection</p>
+
+  <div class="setting-row">
+    <span class="setting-label">Enabled</span>
+    <label class="toggle">
+      <input type="checkbox" id="enabled" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="slider-group">
+    <div class="slider-header">
+      <span class="setting-label">Sensitivity</span>
+      <span class="slider-value" id="sensitivity-value">50</span>
+    </div>
+    <input type="range" id="sensitivity" min="0" max="100" value="50">
+    <p class="hint">Lower = fewer false positives. Higher = catches more AI text.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="api-key-group">
+    <span class="setting-label">Claude API Key</span>
+    <input type="password" id="api-key" class="api-key-input" placeholder="sk-ant-...">
+    <p class="hint">Enables a second AI-detection badge powered by Claude. Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>.</p>
+    <p class="api-key-status" id="api-key-status"></p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
