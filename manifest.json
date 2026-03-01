@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LinkedIn AI Post Detector",
+  "name": "LAID — LinkedIn AI Detector",
   "version": "1.0.0",
-  "description": "Detects AI-generated posts on LinkedIn using client-side heuristics",
+  "description": "Dual-read AI detection for LinkedIn: instant heuristic scoring + Claude API analysis",
   "permissions": ["storage"],
   "host_permissions": ["https://www.linkedin.com/*", "https://api.anthropic.com/*"],
   "icons": {
