@@ -9,6 +9,14 @@ const apiKeyMasked = document.getElementById('api-key-masked');
 const apiKeyStatus = document.getElementById('api-key-status');
 const apiKeyHint = document.getElementById('api-key-hint');
 const providerRadios = document.querySelectorAll('input[name="provider"]');
+const providerLabel = document.getElementById('provider-label');
+
+const PROVIDER_LABELS = {
+  local: 'Local',
+  claude: 'Claude',
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+};
 
 const PROVIDER_CONFIG = {
   claude: {
@@ -48,6 +56,7 @@ function showInput() {
 
 function updateProviderUI(prov) {
   currentProvider = prov;
+  providerLabel.textContent = PROVIDER_LABELS[prov] || prov;
 
   if (prov === 'local') {
     sensitivityGroup.classList.remove('hidden');
