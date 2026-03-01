@@ -32,13 +32,17 @@ Post text:
 
   let settingsLoaded = false;
 
+  function apiKeyStorageKey(prov) {
+    return `apiKey_${prov}`;
+  }
+
   // Load settings from chrome.storage, then run initial scan
   function loadSettings(onReady) {
-    chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
+    chrome.storage.sync.get(null, (data) => {
       if (data.enabled !== undefined) enabled = data.enabled;
       if (data.sensitivity !== undefined) sensitivity = data.sensitivity;
       if (data.provider !== undefined) provider = data.provider;
-      if (data.apiKey !== undefined) apiKey = data.apiKey;
+      apiKey = data[apiKeyStorageKey(provider)] || '';
       settingsLoaded = true;
       onReady();
     });
@@ -54,9 +58,19 @@ Post text:
         sensitivity = changes.sensitivity.newValue;
         if (provider === 'local') reanalyzeAll();
       }
-      if (changes.provider || changes.apiKey) {
-        if (changes.provider) provider = changes.provider.newValue;
-        if (changes.apiKey) apiKey = changes.apiKey.newValue;
+
+      const providerChanged = changes.provider;
+      const keyChanged = changes[apiKeyStorageKey(providerChanged ? providerChanged.newValue : provider)];
+
+      if (providerChanged) {
+        provider = providerChanged.newValue;
+        // Read the key for the new provider
+        chrome.storage.sync.get([apiKeyStorageKey(provider)], (data) => {
+          apiKey = data[apiKeyStorageKey(provider)] || '';
+          clearAndRescan();
+        });
+      } else if (keyChanged) {
+        apiKey = keyChanged.newValue || '';
         clearAndRescan();
       }
     });

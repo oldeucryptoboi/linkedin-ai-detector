@@ -35,6 +35,10 @@ const PROVIDER_CONFIG = {
 
 let currentProvider = 'local';
 
+function storageKeyFor(prov) {
+  return `apiKey_${prov}`;
+}
+
 function maskKey(key) {
   const visible = key.substring(0, 12);
   return visible + '\u2022'.repeat(Math.min(key.length - 12, 20));
@@ -52,6 +56,22 @@ function showInput() {
   apiKeyMasked.style.display = 'none';
   apiKeyInput.style.display = '';
   apiKeyInput.focus();
+}
+
+function showKeyForProvider(prov) {
+  const sKey = storageKeyFor(prov);
+  chrome.storage.sync.get([sKey], (data) => {
+    const key = data[sKey];
+    if (key) {
+      apiKeyInput.value = key;
+      showMasked(key);
+    } else {
+      apiKeyInput.value = '';
+      apiKeyMasked.style.display = 'none';
+      apiKeyInput.style.display = '';
+      apiKeyStatus.textContent = '';
+    }
+  });
 }
 
 function updateProviderUI(prov) {
@@ -72,24 +92,19 @@ function updateProviderUI(prov) {
 }
 
 // Load current settings
-chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
-  enabledCheckbox.checked = data.enabled !== false; // default true
+chrome.storage.sync.get(null, (data) => {
+  enabledCheckbox.checked = data.enabled !== false;
   sensitivitySlider.value = data.sensitivity ?? 50;
   sensitivityValue.textContent = sensitivitySlider.value;
 
   const prov = data.provider || 'local';
-  // Check the correct radio
   for (const radio of providerRadios) {
     radio.checked = radio.value === prov;
   }
   updateProviderUI(prov);
 
-  if (data.apiKey && prov !== 'local') {
-    apiKeyInput.value = data.apiKey;
-    showMasked(data.apiKey);
-  } else {
-    apiKeyMasked.style.display = 'none';
-    apiKeyInput.style.display = '';
+  if (prov !== 'local') {
+    showKeyForProvider(prov);
   }
 });
 
@@ -110,17 +125,9 @@ for (const radio of providerRadios) {
     updateProviderUI(prov);
     chrome.storage.sync.set({ provider: prov });
 
-    // Restore saved key display for this provider
-    chrome.storage.sync.get(['apiKey'], (data) => {
-      if (data.apiKey) {
-        apiKeyInput.value = data.apiKey;
-        showMasked(data.apiKey);
-      } else {
-        apiKeyMasked.style.display = 'none';
-        apiKeyInput.style.display = '';
-        apiKeyStatus.textContent = '';
-      }
-    });
+    if (prov !== 'local') {
+      showKeyForProvider(prov);
+    }
   });
 }
 
@@ -129,10 +136,11 @@ apiKeyMasked.addEventListener('click', () => {
   showInput();
 });
 
-// Save key on blur or Enter
+// Save key on blur or Enter — writes to per-provider storage key
 function saveKey() {
   const key = apiKeyInput.value.trim();
-  chrome.storage.sync.set({ apiKey: key }, () => {
+  const sKey = storageKeyFor(currentProvider);
+  chrome.storage.sync.set({ [sKey]: key }, () => {
     if (key) {
       showMasked(key);
     } else {

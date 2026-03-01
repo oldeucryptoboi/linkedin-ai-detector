@@ -71,7 +71,7 @@ async function main() {
   console.log(`${INFO} Storage:`, JSON.stringify(storage, null, 2));
 
   // Determine API key
-  const apiKey = process.env.ANTHROPIC_API_KEY || storage.apiKey;
+  const apiKey = process.env.ANTHROPIC_API_KEY || storage.apiKey_claude || storage.apiKey;
   if (!apiKey) {
     console.log(`${FAIL} No API key. Set ANTHROPIC_API_KEY env var or enter key in popup.`);
     await waitForClose(context);
@@ -79,12 +79,12 @@ async function main() {
   }
   console.log(`${PASS} API key: ${apiKey.substring(0, 12)}...`);
 
-  // Set provider=claude and apiKey in storage
+  // Set provider=claude and apiKey_claude in storage
   await sw.evaluate((data) =>
     new Promise(r => chrome.storage.sync.set(data, r)),
-    { provider: 'claude', apiKey }
+    { provider: 'claude', apiKey_claude: apiKey }
   );
-  console.log(`${PASS} Set provider=claude + apiKey in storage`);
+  console.log(`${PASS} Set provider=claude + apiKey_claude in storage`);
 
   // --- Step 2: Navigate to LinkedIn ---
   console.log('\n--- Step 2: LinkedIn feed ---');
