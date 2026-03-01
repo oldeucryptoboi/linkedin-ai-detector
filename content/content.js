@@ -30,36 +30,36 @@ window.AIDetector = window.AIDetector || {};
 Post text:
 `;
 
-  // Load settings from chrome.storage, then run initial scan
-  function loadSettings() {
-    if (chrome?.storage?.sync) {
-      chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
-        if (data.enabled !== undefined) enabled = data.enabled;
-        if (data.sensitivity !== undefined) sensitivity = data.sensitivity;
-        if (data.provider !== undefined) provider = data.provider;
-        if (data.apiKey !== undefined) apiKey = data.apiKey;
-        // Scan after settings are loaded
-        if (enabled) scanAllPosts();
-      });
+  let settingsLoaded = false;
 
-      // Listen for setting changes
-      chrome.storage.onChanged.addListener((changes) => {
-        if (changes.enabled) {
-          enabled = changes.enabled.newValue;
-          if (!enabled) removeAllBadges();
-          else scanAllPosts();
-        }
-        if (changes.sensitivity) {
-          sensitivity = changes.sensitivity.newValue;
-          if (provider === 'local') reanalyzeAll();
-        }
-        if (changes.provider || changes.apiKey) {
-          if (changes.provider) provider = changes.provider.newValue;
-          if (changes.apiKey) apiKey = changes.apiKey.newValue;
-          clearAndRescan();
-        }
-      });
-    }
+  // Load settings from chrome.storage, then run initial scan
+  function loadSettings(onReady) {
+    chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
+      if (data.enabled !== undefined) enabled = data.enabled;
+      if (data.sensitivity !== undefined) sensitivity = data.sensitivity;
+      if (data.provider !== undefined) provider = data.provider;
+      if (data.apiKey !== undefined) apiKey = data.apiKey;
+      settingsLoaded = true;
+      onReady();
+    });
+
+    // Listen for setting changes
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.enabled) {
+        enabled = changes.enabled.newValue;
+        if (!enabled) removeAllBadges();
+        else scanAllPosts();
+      }
+      if (changes.sensitivity) {
+        sensitivity = changes.sensitivity.newValue;
+        if (provider === 'local') reanalyzeAll();
+      }
+      if (changes.provider || changes.apiKey) {
+        if (changes.provider) provider = changes.provider.newValue;
+        if (changes.apiKey) apiKey = changes.apiKey.newValue;
+        clearAndRescan();
+      }
+    });
   }
 
   // Extract text content from a post element
@@ -286,7 +286,7 @@ Post text:
   // MutationObserver with requestAnimationFrame debounce
   let rafPending = false;
   function onMutation() {
-    if (rafPending) return;
+    if (!settingsLoaded || rafPending) return;
     rafPending = true;
     requestAnimationFrame(() => {
       rafPending = false;
@@ -297,13 +297,17 @@ Post text:
   // Initialize
   function init() {
     window.AIDetector.styles.inject();
-    loadSettings(); // initial scan happens inside storage callback
 
     // Observe for new posts (LinkedIn SPA / infinite scroll)
     const observer = new MutationObserver(onMutation);
     observer.observe(document.body, {
       childList: true,
       subtree: true
+    });
+
+    // Load settings, then run first scan
+    loadSettings(() => {
+      if (enabled) scanAllPosts();
     });
   }
 
