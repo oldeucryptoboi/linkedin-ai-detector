@@ -69,7 +69,8 @@ function showKeyForProvider(prov) {
       apiKeyInput.value = '';
       apiKeyMasked.style.display = 'none';
       apiKeyInput.style.display = '';
-      apiKeyStatus.textContent = '';
+      apiKeyStatus.textContent = 'No key configured';
+      apiKeyStatus.className = 'api-key-status';
     }
   });
 }
@@ -88,6 +89,13 @@ function updateProviderUI(prov) {
     const config = PROVIDER_CONFIG[prov];
     apiKeyInput.placeholder = config.placeholder;
     apiKeyHint.innerHTML = config.hint;
+
+    // Reset key display immediately (async load will populate if key exists)
+    apiKeyInput.value = '';
+    apiKeyMasked.style.display = 'none';
+    apiKeyInput.style.display = '';
+    apiKeyStatus.textContent = 'No key configured';
+    apiKeyStatus.className = 'api-key-status';
   }
 }
 
