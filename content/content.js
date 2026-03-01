@@ -30,7 +30,7 @@ window.AIDetector = window.AIDetector || {};
 Post text:
 `;
 
-  // Load settings from chrome.storage
+  // Load settings from chrome.storage, then run initial scan
   function loadSettings() {
     if (chrome?.storage?.sync) {
       chrome.storage.sync.get(['enabled', 'sensitivity', 'provider', 'apiKey'], (data) => {
@@ -38,6 +38,8 @@ Post text:
         if (data.sensitivity !== undefined) sensitivity = data.sensitivity;
         if (data.provider !== undefined) provider = data.provider;
         if (data.apiKey !== undefined) apiKey = data.apiKey;
+        // Scan after settings are loaded
+        if (enabled) scanAllPosts();
       });
 
       // Listen for setting changes
@@ -295,10 +297,7 @@ Post text:
   // Initialize
   function init() {
     window.AIDetector.styles.inject();
-    loadSettings();
-
-    // Initial scan
-    scanAllPosts();
+    loadSettings(); // initial scan happens inside storage callback
 
     // Observe for new posts (LinkedIn SPA / infinite scroll)
     const observer = new MutationObserver(onMutation);
