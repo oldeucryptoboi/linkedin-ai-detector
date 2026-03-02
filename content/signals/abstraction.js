@@ -6,13 +6,14 @@ window.AIDetector.signals = window.AIDetector.signals || {};
 window.AIDetector.signals.abstraction = (text) => {
   const { tokenize } = window.AIDetector.textUtils;
   const { linearScale } = window.AIDetector.scoring;
-  const { abstractWords } = window.AIDetector.wordLists;
+  const { abstractWords, abstractPhrases } = window.AIDetector.wordLists;
 
   const tokens = tokenize(text);
   if (tokens.length < 10) {
     return { score: 0, detail: 'Too few words to measure' };
   }
 
+  // Pass 1: single-token abstract words
   let count = 0;
   const found = [];
   for (const token of tokens) {
@@ -24,7 +25,22 @@ window.AIDetector.signals.abstraction = (text) => {
     }
   }
 
-  const ratio = count / tokens.length;
+  // Pass 2: multi-word abstract phrases
+  const lower = text.toLowerCase();
+  let phraseCount = 0;
+  for (const phrase of abstractPhrases) {
+    const matches = lower.split(phrase).length - 1;
+    if (matches > 0) {
+      phraseCount += matches;
+      if (found.length < 5 && !found.includes(phrase)) {
+        found.push(phrase);
+      }
+    }
+  }
+
+  // Each phrase match counts as 2 tokens worth (multi-word = stronger signal)
+  const effectiveCount = count + phraseCount * 2;
+  const ratio = effectiveCount / tokens.length;
 
   // Normal human writing: 0-2% abstract words
   // AI-heavy text: 4-8%+

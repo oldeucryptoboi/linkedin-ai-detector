@@ -25,7 +25,29 @@ window.AIDetector = window.AIDetector || {};
     gemini: 'Gemini',
   };
 
-  const AI_PROMPT = `Analyze this LinkedIn post and determine if it was written by AI or a human. Return ONLY valid JSON with no other text: {"score": <0.0-1.0 where 1.0 = certainly AI>, "reasoning": "<1-2 sentence explanation>"}
+  const AI_PROMPT = `You are an AI-generated text detector. Analyze this LinkedIn post across 8 categories, writing 1 sentence per category. Then provide a final score.
+
+Categories to evaluate:
+1. Voice: Does it sound like a specific person or a generic "helpful assistant"?
+2. Epistemic Texture: Does the author express genuine uncertainty ("idk", "i could be wrong") or only fake hedges ("it is important to note", "essentially")?
+3. Structure: Is it formulaic (hook → listicle → CTA) or organic?
+4. Lexical: Does it overuse AI-favorite words (delve, tapestry, nuanced, multifaceted, leverage, landscape)?
+5. Sentences: Is sentence length varied (human) or uniform (AI)?
+6. Emotion: Are emotions specific and earned, or generic ("inspiring", "excited to share")?
+7. Social/Platform: Does it use contractions, slang, abbreviations naturally?
+8. Cognitive Process: Does reasoning show real thinking (backtracking, asides) or smooth linear flow?
+
+Scoring guidance:
+- 0.0-0.2: Clearly human (messy, specific, genuine voice)
+- 0.3-0.5: Probably human, some AI-like patterns
+- 0.5-0.7: Ambiguous, multiple AI signals present
+- 0.7-0.9: Probably AI (formulaic, polished, generic)
+- 0.9-1.0: Almost certainly AI (hits most categories)
+
+Below you will also receive heuristic signal scores (0.0-1.0 each) from a local analyzer. Use these as additional evidence — they are quantitative and complement your qualitative analysis. If the signals strongly agree, your confidence should be higher. If they disagree with your reading, explain why in your reasoning.
+
+Return ONLY valid JSON with no other text:
+{"score": <0.0-1.0>, "reasoning": "<your 8 category assessments condensed into 2-3 sentences>"}
 
 Post text:
 `;
@@ -101,12 +123,21 @@ Post text:
     });
   }
 
+  // Format local heuristic results as a compact signal summary for the LLM
+  function formatSignalSummary(localResult) {
+    if (!localResult || !localResult.signals) return '';
+    const lines = localResult.signals.map(s =>
+      `  ${s.label}: ${s.score.toFixed(2)} — ${s.detail}`
+    );
+    return `\n\nHeuristic signals (local analysis, score ${(localResult.score * 100).toFixed(0)}% AI):\n${lines.join('\n')}`;
+  }
+
   // Fetch AI analysis directly from content script
   // (MV3 content scripts can fetch cross-origin URLs in host_permissions)
-  async function requestAIAnalysis(prov, key, text) {
+  async function requestAIAnalysis(prov, key, text, localResult) {
     if (!key) return null;
 
-    const prompt = AI_PROMPT + text;
+    const prompt = AI_PROMPT + text + formatSignalSummary(localResult);
 
     try {
       let rawText;
@@ -122,7 +153,7 @@ Post text:
           },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 256,
+            max_tokens: 512,
             messages: [{ role: 'user', content: prompt }],
           }),
         });
@@ -142,7 +173,7 @@ Post text:
           },
           body: JSON.stringify({
             model: 'gpt-4o-mini',
-            max_tokens: 256,
+            max_tokens: 512,
             messages: [{ role: 'user', content: prompt }],
           }),
         });
@@ -232,12 +263,14 @@ Post text:
       postEl._laidBadge = badge;
       postEl._laidPanel = panel;
     } else {
-      // API provider — show loading, then call API
+      // API provider — run local heuristic first, then send to LLM as context
+      const localResult = window.AIDetector.detector.analyze(text, sensitivity);
+
       const loadingBadge = window.AIDetector.badge.createLoading();
       postEl.appendChild(loadingBadge);
       postEl._laidBadge = loadingBadge;
 
-      requestAIAnalysis(provider, apiKey, text).then((aiResult) => {
+      requestAIAnalysis(provider, apiKey, text, localResult).then((aiResult) => {
         loadingBadge.remove();
 
         if (!aiResult) return;
