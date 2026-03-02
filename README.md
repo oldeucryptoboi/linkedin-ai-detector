@@ -49,14 +49,19 @@ API keys are stored per-provider in `chrome.storage.sync` — switching provider
 
 ## Install
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/oldeucryptoboi/linkedin-ai-detector.git
-   ```
+1. Download or clone the repo:
+   - **Download**: Click the green **Code** button above, then **Download ZIP**. Extract the ZIP to a folder.
+   - **Or clone**:
+     ```bash
+     git clone https://github.com/oldeucryptoboi/linkedin-ai-detector.git
+     ```
 2. Open `chrome://extensions/` in Chrome
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** and select the cloned directory
-5. Navigate to LinkedIn — badges appear automatically
+3. Enable **Developer mode** (toggle in the top-right corner)
+4. Click **Load unpacked**
+5. Select the `linkedin-ai-detector` folder (the one containing `manifest.json`)
+6. The LAID icon appears in your toolbar — navigate to LinkedIn and badges show up automatically
+
+To update later, `git pull` (or re-download the ZIP) and click the reload button on the extension card in `chrome://extensions/`.
 
 ## Usage
 
