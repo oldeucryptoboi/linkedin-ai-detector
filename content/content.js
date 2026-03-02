@@ -37,7 +37,7 @@ Categories to evaluate:
 7. Social/Platform: Does it use contractions, slang, abbreviations naturally?
 8. Cognitive Process: Does reasoning show real thinking (backtracking, asides) or smooth linear flow?
 
-Pay particular attention to these "engagement-optimized executive voice" tells:
+These are strong AI tells — patterns typical of "engagement-optimized executive voice" that AI produces but humans rarely do naturally:
 - Use of pop culture metaphor as hook
 - Introduction of a named framework or acronym
 - Clean problem → insight → moral structure
