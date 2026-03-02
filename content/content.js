@@ -37,6 +37,14 @@ Categories to evaluate:
 7. Social/Platform: Does it use contractions, slang, abbreviations naturally?
 8. Cognitive Process: Does reasoning show real thinking (backtracking, asides) or smooth linear flow?
 
+Pay particular attention to these "engagement-optimized executive voice" tells:
+- Use of pop culture metaphor as hook
+- Introduction of a named framework or acronym
+- Clean problem → insight → moral structure
+- Punchy contrast sentences near the end
+- Emotionally resonant but abstract claims
+- Statistics without deep sourcing
+
 Scoring guidance:
 - 0.0-0.2: Clearly human (messy, specific, genuine voice)
 - 0.3-0.5: Probably human, some AI-like patterns
