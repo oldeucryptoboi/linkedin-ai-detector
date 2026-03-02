@@ -1,3 +1,7 @@
 .chrome-profile/
 node_modules/
+.DS_Store
+*.zip
 scripts/screenshot.png
+scripts/diagnostic-screenshot.png
+linkedin-post.md
