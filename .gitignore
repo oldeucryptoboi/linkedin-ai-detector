@@ -4,4 +4,6 @@ node_modules/
 *.zip
 scripts/screenshot.png
 scripts/diagnostic-screenshot.png
+store-screenshot.png
+scripts/store-screenshot.png
 linkedin-post.md
