@@ -131,6 +131,10 @@ To update later, `git pull` (or re-download the ZIP) and click the reload button
 6. Goedecke, S. (2025). "Why do AI models use so many em-dashes?" [seangoedecke.com](https://www.seangoedecke.com/em-dashes/)
 7. Juzek, T. & Ward, J. (2024). "Why Does ChatGPT 'Delve' So Much?" *COLING 2025*. [arXiv:2412.11385](https://arxiv.org/abs/2412.11385)
 
+## Author
+
+Built by [oldcryptoboi](https://oldeucryptoboi.com). Read the [deep dive on LAID's detection approach](https://oldeucryptoboi.com/blog/laid-detecting-ai-on-linkedin/) and more on the [blog](https://oldeucryptoboi.com/blog).
+
 ## License
 
 MIT
