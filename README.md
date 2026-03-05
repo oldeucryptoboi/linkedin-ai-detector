@@ -133,7 +133,7 @@ To update later, `git pull` (or re-download the ZIP) and click the reload button
 
 ## Author
 
-Built by [oldcryptoboi](https://oldeucryptoboi.com). Read the [deep dive on LAID's detection approach](https://oldeucryptoboi.com/blog/laid-detecting-ai-on-linkedin/) and more on the [blog](https://oldeucryptoboi.com/blog).
+Built by [oldeucryptoboi](https://oldeucryptoboi.com). Read the [deep dive on LAID's detection approach](https://oldeucryptoboi.com/blog/laid-detecting-ai-on-linkedin/) and more on the [blog](https://oldeucryptoboi.com/blog).
 
 ## License
 
