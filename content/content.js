@@ -2,16 +2,24 @@ window.AIDetector = window.AIDetector || {};
 
 // Entry point: MutationObserver, post discovery, orchestration
 (() => {
-  const SELECTORS = {
-    // LinkedIn feed post containers
-    feedPost: '.feed-shared-update-v2',
-    // Post text content
-    postText: '.feed-shared-update-v2__description, .feed-shared-text, .break-words',
-    // "See more" expanded text container
+  const hostname = location.hostname;
+  const isTwitter = hostname === 'x.com' || hostname === 'twitter.com';
+
+  const LINKEDIN_SELECTORS = {
+    feedPost: '.feed-shared-update-v2, .comments-comment-item, .comments-comment-entity',
+    postText: '.feed-shared-update-v2__description, .feed-shared-text, .break-words, .comments-comment-item__main-content, .comments-comment-entity__content, .update-components-text',
     seeMoreText: '.feed-shared-inline-show-more-text',
+    comment: '.comments-comment-item, .comments-comment-entity',
   };
 
-  const MIN_TEXT_LENGTH = 100;
+  const TWITTER_SELECTORS = {
+    feedPost: 'article[data-testid="tweet"]',
+    postText: '[data-testid="tweetText"]',
+    seeMoreText: null,
+  };
+
+  const SELECTORS = isTwitter ? TWITTER_SELECTORS : LINKEDIN_SELECTORS;
+  const MIN_TEXT_LENGTH = isTwitter ? 50 : 100;
   const processedPosts = new WeakSet();
   let enabled = true;
   let sensitivity = 50;
@@ -25,7 +33,9 @@ window.AIDetector = window.AIDetector || {};
     gemini: 'Gemini',
   };
 
-  const AI_PROMPT = `You are an AI-generated text detector. Analyze this LinkedIn post across 8 categories, writing 1 sentence per category. Then provide a final score.
+  const platformName = isTwitter ? 'tweet' : 'LinkedIn post';
+
+  const AI_PROMPT = `You are an AI-generated text detector. Analyze this ${platformName} across 8 categories, writing 1 sentence per category. Then provide a final score.
 
 Categories to evaluate:
 1. Voice: Does it sound like a specific person or a generic "helpful assistant"?
@@ -86,7 +96,7 @@ Post text:
       }
       if (changes.sensitivity) {
         sensitivity = changes.sensitivity.newValue;
-        if (provider === 'local') reanalyzeAll();
+        if (provider === 'local') clearAndRescan();
       }
 
       const providerChanged = changes.provider;
@@ -108,7 +118,7 @@ Post text:
 
   // Extract text content from a post element
   function extractPostText(postEl) {
-    const textEl = postEl.querySelector(SELECTORS.seeMoreText) ||
+    const textEl = (SELECTORS.seeMoreText && postEl.querySelector(SELECTORS.seeMoreText)) ||
                    postEl.querySelector(SELECTORS.postText);
     if (!textEl) return '';
     return textEl.innerText || textEl.textContent || '';
@@ -245,7 +255,9 @@ Post text:
     if (!enabled) return;
 
     const text = extractPostText(postEl);
-    if (text.length < MIN_TEXT_LENGTH) return;
+    const isComment = !isTwitter && SELECTORS.comment && postEl.matches(SELECTORS.comment);
+    const minLength = isComment ? 50 : MIN_TEXT_LENGTH;
+    if (text.length < minLength) return;
 
     processedPosts.add(postEl);
 
@@ -327,25 +339,25 @@ Post text:
   function reanalyzeAll() {
     const posts = document.querySelectorAll(SELECTORS.feedPost);
     for (const post of posts) {
-      if (post._laidText && post._laidBadge && post._laidPanel) {
+      if (post._laidText && post._laidBadge) {
         const result = window.AIDetector.detector.analyze(post._laidText, sensitivity);
+        const wasOpen = post._laidPanel && post._laidPanel.classList.contains('laid-panel--open');
 
-        // Update badge
-        post._laidBadge.style.backgroundColor = result.color;
-        post._laidBadge.textContent = Math.round(result.score * 100);
-        post._laidBadge.title = `Heuristic: ${result.label}`;
+        // Remove old badge and panel completely
+        post._laidBadge.remove();
+        if (post._laidPanel) post._laidPanel.remove();
 
-        // Replace panel
-        const newPanel = window.AIDetector.detailPanel.create(result);
-        const wasOpen = post._laidPanel.classList.contains('laid-panel--open');
-        post._laidPanel.remove();
-        post.appendChild(newPanel);
-        post._laidPanel = newPanel;
-        if (wasOpen) newPanel.classList.add('laid-panel--open');
+        // Recreate badge and panel from scratch
+        const badge = window.AIDetector.badge.create(result);
+        const panel = window.AIDetector.detailPanel.create(result);
+        bindBadgeClick(badge, panel);
 
-        // Re-bind badge click
-        post._laidBadge.onclick = null;
-        bindBadgeClick(post._laidBadge, newPanel);
+        post.appendChild(badge);
+        post.appendChild(panel);
+
+        post._laidBadge = badge;
+        post._laidPanel = panel;
+        if (wasOpen) panel.classList.add('laid-panel--open');
       }
     }
   }

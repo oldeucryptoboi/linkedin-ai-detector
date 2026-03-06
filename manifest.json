@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "LAID — LinkedIn AI Detector",
-  "version": "1.0.0",
-  "description": "AI detection for LinkedIn: local heuristic or API-powered analysis (Claude, OpenAI, Gemini)",
+  "name": "X/LAID — AI Detector",
+  "version": "1.1.0",
+  "description": "AI detection for LinkedIn and X/Twitter: local heuristic or API-powered analysis (Claude, OpenAI, Gemini)",
   "permissions": ["storage"],
   "host_permissions": [
     "https://www.linkedin.com/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
     "https://api.anthropic.com/*",
     "https://api.openai.com/*",
     "https://generativelanguage.googleapis.com/*"
@@ -29,6 +31,34 @@
   "content_scripts": [
     {
       "matches": ["https://www.linkedin.com/*"],
+      "js": [
+        "lib/text-utils.js",
+        "lib/word-lists.js",
+        "lib/scoring.js",
+        "content/signals/burstiness.js",
+        "content/signals/abstraction.js",
+        "content/signals/transitions.js",
+        "content/signals/generic-phrases.js",
+        "content/signals/paragraph-uniformity.js",
+        "content/signals/cadence.js",
+        "content/signals/contrast-hooks.js",
+        "content/signals/structure.js",
+        "content/signals/three-point.js",
+        "content/signals/list-density.js",
+        "content/signals/em-dash.js",
+        "content/signals/epistemic.js",
+        "content/signals/contractions.js",
+        "content/signals/personal-specificity.js",
+        "content/detector.js",
+        "content/ui/styles.js",
+        "content/ui/badge.js",
+        "content/ui/detail-panel.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
       "js": [
         "lib/text-utils.js",
         "lib/word-lists.js",

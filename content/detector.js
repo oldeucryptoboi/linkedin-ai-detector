@@ -20,8 +20,9 @@ window.AIDetector.detector = (() => {
   ];
 
   function analyze(text, sensitivity) {
-    // sensitivity: 0-100, default 50. Biases final score ±15%
-    const sensitivityBias = ((sensitivity ?? 50) - 50) / 50 * 0.15;
+    // sensitivity: 0-100, default 50.
+    // 0 = all human (score → 0), 50 = neutral (unchanged), 100 = all AI (score → 1)
+    const s = (sensitivity ?? 50) / 100; // normalize to 0-1
 
     const results = [];
     let weightedSum = 0;
@@ -49,8 +50,16 @@ window.AIDetector.detector = (() => {
       }
     }
 
-    // Apply sensitivity bias and clamp
-    const finalScore = Math.max(0, Math.min(1, weightedSum + sensitivityBias));
+    // Apply sensitivity: blend raw score toward 0 (left) or 1 (right)
+    const rawScore = Math.max(0, Math.min(1, weightedSum));
+    let finalScore;
+    if (s <= 0.5) {
+      // 0→all human (score*0), 0.5→neutral (score*1)
+      finalScore = rawScore * (s / 0.5);
+    } else {
+      // 0.5→neutral (rawScore), 1→all AI (1.0)
+      finalScore = rawScore + (1 - rawScore) * ((s - 0.5) / 0.5);
+    }
 
     return {
       score: finalScore,

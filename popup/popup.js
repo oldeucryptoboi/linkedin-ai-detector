@@ -11,6 +11,14 @@ const apiKeyHint = document.getElementById('api-key-hint');
 const providerRadios = document.querySelectorAll('input[name="provider"]');
 const providerLabel = document.getElementById('provider-label');
 
+// Detect active tab platform and update branding
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  const url = tabs[0]?.url || '';
+  const isTwitter = url.includes('x.com') || url.includes('twitter.com');
+  document.getElementById('app-title').textContent = isTwitter ? 'XAID' : 'LAID';
+  document.getElementById('platform-label').textContent = isTwitter ? 'X' : 'LinkedIn';
+});
+
 const PROVIDER_LABELS = {
   local: 'Local',
   claude: 'Claude',
@@ -121,9 +129,13 @@ enabledCheckbox.addEventListener('change', () => {
   chrome.storage.sync.set({ enabled: enabledCheckbox.checked });
 });
 
+let sensitivityTimer = null;
 sensitivitySlider.addEventListener('input', () => {
   sensitivityValue.textContent = sensitivitySlider.value;
-  chrome.storage.sync.set({ sensitivity: parseInt(sensitivitySlider.value) });
+  clearTimeout(sensitivityTimer);
+  sensitivityTimer = setTimeout(() => {
+    chrome.storage.sync.set({ sensitivity: parseInt(sensitivitySlider.value) });
+  }, 150);
 });
 
 // Provider selection

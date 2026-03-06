@@ -1,6 +1,6 @@
 window.AIDetector = window.AIDetector || {};
 
-// Injects scoped CSS with laid- prefix to avoid collisions with LinkedIn styles
+// Injects scoped CSS with laid- prefix to avoid collisions with host page styles
 window.AIDetector.styles = (() => {
   let injected = false;
 
@@ -12,29 +12,29 @@ window.AIDetector.styles = (() => {
     style.textContent = `
       .laid-badge {
         position: absolute;
-        top: 12px;
-        right: 12px;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
+        top: 0;
+        right: 0;
+        width: 36px;
+        height: 36px;
+        clip-path: polygon(0 0, 100% 0, 100% 100%);
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 3px 4px 0 0;
         font-size: 11px;
         font-weight: 700;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         color: #fff;
         cursor: pointer;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
         user-select: none;
         line-height: 1;
         z-index: 10;
+        transform-origin: top right;
+        transition: transform 0.15s ease;
       }
 
       .laid-badge:hover {
         transform: scale(1.15);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       }
 
       .laid-badge--ai {
@@ -44,7 +44,6 @@ window.AIDetector.styles = (() => {
 
       .laid-badge--loading {
         background-color: #a78bfa;
-        font-size: 9px;
       }
 
       @keyframes laid-spin {
@@ -53,8 +52,11 @@ window.AIDetector.styles = (() => {
 
       .laid-badge--loading::after {
         content: '';
-        width: 12px;
-        height: 12px;
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 10px;
+        height: 10px;
         border: 2px solid rgba(255,255,255,0.3);
         border-top-color: #fff;
         border-radius: 50%;
@@ -63,8 +65,8 @@ window.AIDetector.styles = (() => {
 
       .laid-panel {
         position: absolute;
-        top: 44px;
-        right: 12px;
+        top: 36px;
+        right: 0;
         width: 300px;
         background: #fff;
         border: 1px solid #e0e0e0;
